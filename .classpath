@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry excluding="de/|misc/|test/" kind="src" path=""/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="lib" path="C:/Program Files/Java/jdk1.8.0_131/lib/tools.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Ahmar Aftab/eclipse-jEdit/jEdit/lib/compile/jsr305.jar"/>
+	<classpathentry kind="output" path="build-eclipse"/>
+</classpath>
