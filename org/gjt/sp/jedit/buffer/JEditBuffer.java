@@ -74,6 +74,8 @@ import java.util.regex.Pattern;
  */
 public class JEditBuffer
 {
+	private JEditBufferUtils jEditBufferUtils = new JEditBufferUtils();
+
 	/**
 	 * Line separator property.
 	 */
@@ -88,7 +90,7 @@ public class JEditBuffer
 	//{{{ JEditBuffer constructors
 
 	{
-		bufferListeners = new Vector<Listener>();
+		//bufferListeners = new Vector<Listener>();
 		lock = new ReentrantReadWriteLock();
 		contentMgr = new ContentManager();
 		lineMgr = new LineManager();
@@ -779,7 +781,7 @@ public class JEditBuffer
 					!dirty);
 			}
 
-			firePreContentRemoved(startLine,offset,numLines,length);
+			jEditBufferUtils.firePreContentRemoved(startLine,offset,numLines,length, this);
 
 			contentMgr.remove(offset,length);
 			lineMgr.contentRemoved(startLine,offset,numLines,length);
@@ -787,11 +789,11 @@ public class JEditBuffer
 
 			setDirty(true);
 
-			fireContentRemoved(startLine,offset,numLines,length);
+			jEditBufferUtils.fireContentRemoved(startLine,offset,numLines,length, this);
 
 			/* otherwise it will be delivered later */
 			if(!undoInProgress && !insideCompoundEdit())
-				fireTransactionComplete();
+				jEditBufferUtils.fireTransactionComplete(this);
 
 		}
 		finally
@@ -1915,7 +1917,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	public void invalidateCachedFoldLevels()
 	{
 		lineMgr.setFirstInvalidFoldLevel(0);
-		fireFoldLevelChanged(0,getLineCount());
+		jEditBufferUtils.fireFoldLevelChanged(0,getLineCount(), this);
 	} //}}}
 
 	//{{{ getFoldLevel() method
@@ -1986,7 +1988,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 			{
 				if(Debug.FOLD_DEBUG)
 					Log.log(Log.DEBUG,this,"fold level changed: " + firstUpdatedFoldLevel + ',' + line);
-				fireFoldLevelChanged(firstUpdatedFoldLevel,line);
+				jEditBufferUtils.fireFoldLevelChanged(firstUpdatedFoldLevel,line, this);
 			}
 
 			return newFoldLevel;
@@ -2080,7 +2082,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 
 		lineMgr.setFirstInvalidFoldLevel(0);
 
-		fireFoldHandlerChanged();
+		jEditBufferUtils.fireFoldHandlerChanged(this);
 	} //}}}
 
 	//}}}
@@ -2119,7 +2121,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 				textArea.setSelection(s);
 			}
 			fireEndUndo();
-			fireTransactionComplete();
+			jEditBufferUtils.fireTransactionComplete(this);
 		}
 		finally
 		{
@@ -2162,7 +2164,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 			}
 
 			fireEndRedo();
-			fireTransactionComplete();
+			jEditBufferUtils.fireTransactionComplete(this);
 		}
 		finally
 		{
@@ -2226,7 +2228,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 			undoMgr.endCompoundEdit();
 
 			if(!insideCompoundEdit())
-				fireTransactionComplete();
+				jEditBufferUtils.fireTransactionComplete(this);
 		}
 		finally
 		{
@@ -2277,7 +2279,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	public static final int NORMAL_PRIORITY = 0;
 	public static final int HIGH_PRIORITY = 1;
 
-	static class Listener
+	public static class Listener
 	{
 		BufferListener listener;
 		int priority;
@@ -2300,17 +2302,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	public void addBufferListener(BufferListener listener,
 		int priority)
 	{
-		Listener l = new Listener(listener,priority);
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			Listener _l = bufferListeners.get(i);
-			if(_l.priority < priority)
-			{
-				bufferListeners.add(i,l);
-				return;
-			}
-		}
-		bufferListeners.add(l);
+		jEditBufferUtils.addBufferListener(listener, priority);
 	}
 
 	/**
@@ -2320,7 +2312,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	 */
 	public void addBufferListener(BufferListener listener)
 	{
-		addBufferListener(listener,NORMAL_PRIORITY);
+		jEditBufferUtils.addBufferListener(listener,NORMAL_PRIORITY);
 	} //}}}
 
 	//{{{ removeBufferListener() method
@@ -2331,14 +2323,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	 */
 	public void removeBufferListener(BufferListener listener)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			if(bufferListeners.get(i).listener == listener)
-			{
-				bufferListeners.remove(i);
-				return;
-			}
-		}
+		jEditBufferUtils.removeBufferListener(listener);
 	} //}}}
 
 	//{{{ getBufferListeners() method
@@ -2348,14 +2333,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 	 */
 	public BufferListener[] getBufferListeners()
 	{
-		BufferListener[] returnValue
-			= new BufferListener[
-			bufferListeners.size()];
-		for(int i = 0; i < returnValue.length; i++)
-		{
-			returnValue[i] = bufferListeners.get(i).listener;
-		}
-		return returnValue;
+		return jEditBufferUtils.getBufferListeners();
 	} //}}}
 
 	//{{{ setUndoLimit() method
@@ -2441,99 +2419,35 @@ loop:		for(int i = 0; i < seg.count; i++)
 	//{{{ fireFoldLevelChanged() method
 	protected void fireFoldLevelChanged(int start, int end)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.foldLevelChanged(this,start,end);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireFoldLevelChanged(start, end, this);
 	} //}}}
 
 	//{{{ fireContentInserted() method
 	protected void fireContentInserted(int startLine, int offset,
 		int numLines, int length)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.contentInserted(this,startLine,
-					offset,numLines,length);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireContentInserted(startLine, offset, numLines, length, this);
 	} //}}}
 
 	//{{{ fireContentRemoved() method
 	protected void fireContentRemoved(int startLine, int offset,
 		int numLines, int length)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.contentRemoved(this,startLine,
-					offset,numLines,length);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireContentRemoved(startLine, offset, numLines, length, this);
 	} //}}}
 
 	//{{{ firePreContentInserted() method
 	protected void firePreContentInserted(int startLine, int offset,
 		int numLines, int length)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.preContentInserted(this,startLine,
-					offset,numLines,length);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.firePreContentInserted(startLine, offset, numLines, length, this);
 	} //}}}
 
 	//{{{ firePreContentRemoved() method
 	protected void firePreContentRemoved(int startLine, int offset,
 		int numLines, int length)
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.preContentRemoved(this,startLine,
-					offset,numLines,length);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.firePreContentRemoved(startLine, offset, numLines, length, this);
 	} //}}}
 
 	//{{{ fireBeginUndo() method
@@ -2559,55 +2473,19 @@ loop:		for(int i = 0; i < seg.count; i++)
 	//{{{ fireTransactionComplete() method
 	protected void fireTransactionComplete()
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.transactionComplete(this);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireTransactionComplete(this);
 	} //}}}
 
 	//{{{ fireFoldHandlerChanged() method
 	protected void fireFoldHandlerChanged()
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.foldHandlerChanged(this);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireFoldHandlerChanged(this);
 	} //}}}
 
 	//{{{ fireBufferLoaded() method
 	protected void fireBufferLoaded()
 	{
-		for(int i = 0; i < bufferListeners.size(); i++)
-		{
-			BufferListener listener = getListener(i);
-			try
-			{
-				listener.bufferLoaded(this);
-			}
-			catch(Throwable t)
-			{
-				Log.log(Log.ERROR,this,"Exception while sending buffer event to "+ listener +" :");
-				Log.log(Log.ERROR,this,t);
-			}
-		}
+		jEditBufferUtils.fireBufferLoaded(this);
 	} //}}}
 
 	//}}}
@@ -2644,17 +2522,17 @@ loop:		for(int i = 0; i < seg.count; i++)
 			// contentMgr.remove() changes this!
 			int length = getLength();
 
-			firePreContentRemoved(0,0,getLineCount()
-				- 1,length);
+			jEditBufferUtils.firePreContentRemoved(0,0,getLineCount()
+				- 1,length, this);
 
 			contentMgr.remove(0,length);
 			lineMgr.contentRemoved(0,0,getLineCount()
 				- 1,length);
 			positionMgr.contentRemoved(0,length);
-			fireContentRemoved(0,0,getLineCount()
-				- 1,length);
+			jEditBufferUtils.fireContentRemoved(0,0,getLineCount()
+				- 1,length, this);
 
-			firePreContentInserted(0, 0, endOffsets.getSize() - 1, seg.count - 1);
+			jEditBufferUtils.firePreContentInserted(0, 0, endOffsets.getSize() - 1, seg.count - 1, this);
 			// theoretically a segment could
 			// have seg.offset != 0 but
 			// SegmentBuffer never does that
@@ -2663,9 +2541,9 @@ loop:		for(int i = 0; i < seg.count; i++)
 			lineMgr._contentInserted(endOffsets);
 			positionMgr.contentInserted(0,seg.count);
 
-			fireContentInserted(0,0,
+			jEditBufferUtils.fireContentInserted(0,0,
 				endOffsets.getSize() - 1,
-				seg.count - 1);
+				seg.count - 1, this);
 		}
 		finally
 		{
@@ -2744,8 +2622,6 @@ loop:		for(int i = 0; i < seg.count; i++)
 
 	//}}}
 
-	//{{{ Private members
-	private final List<Listener> bufferListeners;
 	private final ReentrantReadWriteLock lock;
 	private final ContentManager contentMgr;
 	private final LineManager lineMgr;
@@ -2768,12 +2644,6 @@ loop:		for(int i = 0; i < seg.count; i++)
 	public boolean elasticTabstopsOn = false;
 	private ColumnBlock columnBlock;
 
-	//{{{ getListener() method
-	private BufferListener getListener(int index)
-	{
-		return bufferListeners.get(index).listener;
-	} //}}}
-
 	//{{{ contentInserted() method
 	private void contentInserted(int offset, int length,
 		IntegerArray endOffsets)
@@ -2787,7 +2657,7 @@ loop:		for(int i = 0; i < seg.count; i++)
 
 			if (!loading)
 			{
-				firePreContentInserted(startLine, offset, numLines, length);
+				jEditBufferUtils.firePreContentInserted(startLine, offset, numLines, length, this);
 			}
 
 			lineMgr.contentInserted(startLine,offset,numLines,length,
@@ -2798,10 +2668,10 @@ loop:		for(int i = 0; i < seg.count; i++)
 
 			if(!loading)
 			{
-				fireContentInserted(startLine,offset,numLines,length);
+				jEditBufferUtils.fireContentInserted(startLine,offset,numLines,length, this);
 
 				if(!undoInProgress && !insideCompoundEdit())
-					fireTransactionComplete();
+					jEditBufferUtils.fireTransactionComplete(this);
 			}
 
 		}

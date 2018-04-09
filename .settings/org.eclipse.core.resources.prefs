@@ -1,2 +1,6 @@
 eclipse.preferences.version=1
+encoding//org/gjt/sp/jedit/buffer/JEditBufferUtils.java=UTF-8
 encoding//org/gjt/sp/jedit/jedit_gui.props=UTF-8
+encoding//test/org/jedit/io/Native2ASCIIEncodingTest.java=UTF-8
+encoding/<project>=UTF-8
+encoding/test=UTF-8

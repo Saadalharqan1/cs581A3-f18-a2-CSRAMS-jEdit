@@ -122,6 +122,41 @@ public interface StructureMatcher
 			this.endLine = endLine;
 			this.end = end;
 		}
+
+		int[] getOffsets(int screenLine, Highlight highlight)
+		{
+			int x1, x2;
+		
+			int matchStartLine = highlight.textArea.getScreenLineOfOffset(
+				start);
+			int matchEndLine = highlight.textArea.getScreenLineOfOffset(
+				end);
+		
+			if(matchStartLine == screenLine)
+			{
+				x1 = start;
+			}
+			else
+			{
+				x1 = highlight.textArea.getScreenLineStartOffset(
+					screenLine);
+			}
+		
+			if(matchEndLine == screenLine)
+			{
+				x2 = end;
+			}
+			else
+			{
+				x2 = highlight.textArea.getScreenLineEndOffset(
+					screenLine) - 1;
+			}
+		
+			return new int[] {
+				highlight.textArea.offsetToXY(x1).x,
+				highlight.textArea.offsetToXY(x2).x
+			};
+		}
 	} //}}}
 
 	//{{{ Highlight class
@@ -149,41 +184,6 @@ public interface StructureMatcher
 			}
 		}
 
-		private int[] getOffsets(int screenLine, Match match)
-		{
-			int x1, x2;
-
-			int matchStartLine = textArea.getScreenLineOfOffset(
-				match.start);
-			int matchEndLine = textArea.getScreenLineOfOffset(
-				match.end);
-
-			if(matchStartLine == screenLine)
-			{
-				x1 = match.start;
-			}
-			else
-			{
-				x1 = textArea.getScreenLineStartOffset(
-					screenLine);
-			}
-
-			if(matchEndLine == screenLine)
-			{
-				x2 = match.end;
-			}
-			else
-			{
-				x2 = textArea.getScreenLineEndOffset(
-					screenLine) - 1;
-			}
-
-			return new int[] {
-				textArea.offsetToXY(x1).x,
-				textArea.offsetToXY(x2).x
-			};
-		}
-	
 		private void paintHighlight(Graphics gfx, int screenLine,
 			int start, int end, int y,
 			Match match)
@@ -205,7 +205,7 @@ public interface StructureMatcher
 				textArea.getPainter().getLineHeight(), textArea.getPainter().getFontHeight());
 			y += Math.max(textArea.getPainter().getLineExtraSpacing(), 0);
 
-			int[] offsets = getOffsets(screenLine,match);
+			int[] offsets = match.getOffsets(screenLine,Highlight.this);
 			int x1 = offsets[0];
 			int x2 = offsets[1];
 
@@ -218,7 +218,7 @@ public interface StructureMatcher
 				gfx.drawLine(x1,y,x2,y);
 			else
 			{
-				offsets = getOffsets(screenLine - 1,match);
+				offsets = match.getOffsets(screenLine - 1,Highlight.this);
 				int prevX1 = offsets[0];
 				int prevX2 = offsets[1];
 

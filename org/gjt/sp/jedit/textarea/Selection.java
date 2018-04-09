@@ -87,6 +87,21 @@ public abstract class Selection implements Cloneable
 	 * @since jEdit 4.1pre1
 	 */
 	public abstract int getEnd(JEditBuffer buffer, int line);
+	
+	/**
+	 * returns the getStart Column
+	 * @param buffer
+	 * @return
+	 */
+	public abstract int getStartColumn(JEditBuffer buffer);
+	
+	/**
+	 * 
+	 * returns the get end column
+	 * @param buffer
+	 * @return
+	 */
+	public abstract int getEndColumn(JEditBuffer buffer);
 	//}}}
 
 	//{{{ getStartLine() method
@@ -344,6 +359,18 @@ public abstract class Selection implements Cloneable
 			return changed;
 		} //}}}
 
+		@Override
+		public int getStartColumn(JEditBuffer buffer) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public int getEndColumn(JEditBuffer buffer) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
 		//}}}
 	} //}}}
 
@@ -412,6 +439,7 @@ public abstract class Selection implements Cloneable
 			this.end = endOffset;
 		} //}}}
 
+		@Override
 		//{{{ getStartColumn() method
 		public int getStartColumn(JEditBuffer buffer)
 		{
@@ -422,6 +450,7 @@ public abstract class Selection implements Cloneable
 			return Math.min(virtColStart,virtColEnd);
 		} //}}}
 
+		@Override
 		//{{{ getEndColumn() method
 		public int getEndColumn(JEditBuffer buffer)
 		{
