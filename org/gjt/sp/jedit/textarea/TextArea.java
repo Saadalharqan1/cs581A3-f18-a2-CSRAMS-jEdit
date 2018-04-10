@@ -5926,16 +5926,27 @@ loop:		for(int i = lineNo - 1; i >= 0; i--)
 			for (Selection s : selections)
 			{
 				
-				int startColumn = s.getStartColumn(buffer);
-				if(startColumn == s.getEndColumn(buffer))
-				{
-					if(!forward && startColumn == 0)
-						javax.swing.UIManager.getLookAndFeel().provideErrorFeedback(null); 
-					else
-						tallCaretDelete((Selection.Rect)s,forward);
-				}
-				else
+				
+			
+			
+				if(Selection.Rect.class.isInstance(s)) {
+					int startColumn = s.getStartColumn(buffer);
+					if(startColumn == s.getEndColumn(buffer))
+					{
+						if(!forward && startColumn == 0)
+							javax.swing.UIManager.getLookAndFeel().provideErrorFeedback(null); 
+						else 
+							tallCaretDelete((Selection.Rect)s,forward);
+					}
+					else {
+						setSelectedText(s,null);
+					}
+				}else {
 					setSelectedText(s,null);
+				}
+					
+				
+					
 			
 				/*if(s instanceof Selection.Rect)
 				{

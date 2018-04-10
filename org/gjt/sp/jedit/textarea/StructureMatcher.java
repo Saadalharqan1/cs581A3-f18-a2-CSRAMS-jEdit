@@ -25,6 +25,7 @@ package org.gjt.sp.jedit.textarea;
 //{{{ Imports
 import java.awt.*;
 import org.gjt.sp.jedit.TextUtilities;
+import org.gjt.sp.jedit.View;
 //}}}
 
 /**
@@ -122,7 +123,7 @@ public interface StructureMatcher
 			this.endLine = endLine;
 			this.end = end;
 		}
-
+		
 		int[] getOffsets(int screenLine, Highlight highlight)
 		{
 			int x1, x2;
@@ -159,6 +160,8 @@ public interface StructureMatcher
 		}
 	} //}}}
 
+	
+	
 	//{{{ Highlight class
 	/**
 	 * Paints the structure match highlight.
